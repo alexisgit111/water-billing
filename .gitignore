@@ -1,0 +1,6 @@
+# Never commit these
+.env
+*.env
+get-column-ids.js
+.vercel/
+node_modules/

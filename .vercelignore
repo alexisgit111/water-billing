@@ -1,0 +1,5 @@
+# Files excluded from Vercel deployment
+get-column-ids.js
+README.md
+.env
+*.env

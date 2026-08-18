@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Water Billing System – Harcourts Golden Links</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<style>
+:root {
+  --navy: #0a2240; --navy2: #153558; --cyan: #00b4d8; --cyan2: #90e0ef;
+  --green: #16a34a; --red: #dc2626;
+  --gray0: #f7f9fc; --gray1: #eef1f6; --gray2: #dde3ec; --gray3: #b0bac8;
+  --gray4: #6b7a92; --gray5: #374151; --white: #ffffff;
+  --r: 10px; --sh: 0 2px 16px rgba(10,34,64,.09);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; background: #edf1f7; color: var(--gray5); min-height: 100vh; }
+
+.hdr { background: var(--navy); height: 58px; display: flex; align-items: center; padding: 0 28px; gap: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.22); }
+.hdr-logo { height:34px;width:34px;background:var(--cyan);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:var(--navy); }
+.hdr-title { color:#fff;font-size:16px;font-weight:700; }
+.hdr-sub { color:var(--cyan2);font-size:12px;margin-left:auto; }
+
+.steps-bar { background:#fff;border-bottom:1px solid var(--gray2);padding:14px 28px 0; }
+.steps { display:flex;max-width:700px;margin:0 auto; }
+.step { flex:1;display:flex;flex-direction:column;align-items:center;padding-bottom:14px;position:relative; }
+.step:not(:last-child)::after { content:'';position:absolute;top:14px;left:60%;width:80%;height:2px;background:var(--gray2); }
+.step.done:not(:last-child)::after { background:var(--cyan); }
+.step-dot { width:28px;height:28px;border-radius:50%;background:var(--gray2);color:var(--gray4);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;z-index:1;transition:all .25s; }
+.step.active .step-dot { background:var(--cyan);color:var(--navy); }
+.step.done .step-dot { background:var(--navy);color:#fff; }
+.step-lbl { font-size:11px;color:var(--gray4);margin-top:5px;text-align:center; }
+.step.active .step-lbl { color:var(--navy);font-weight:600; }
+
+.wrap { max-width:860px;margin:28px auto 60px;padding:0 14px; }
+
+.card { background:#fff;border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:20px; }
+.card-hd { background:var(--navy);padding:16px 24px; }
+.card-hd h2 { color:#fff;font-size:15px;font-weight:700; }
+.card-hd p { color:var(--cyan2);font-size:12px;margin-top:2px; }
+.card-bd { padding:24px; }
+
+.grid2 { display:grid;grid-template-columns:1fr 1fr;gap:16px; }
+.full { grid-column:1/-1; }
+.fg { display:flex;flex-direction:column;gap:5px; }
+label { font-size:12px;font-weight:700;color:var(--navy);letter-spacing:.2px; }
+label .req { color:var(--red); }
+input, select, textarea {
+  border:1.5px solid var(--gray2);border-radius:7px;padding:9px 12px;
+  font-size:14px;color:var(--gray5);background:var(--gray0);
+  outline:none;width:100%;transition:border .18s,box-shadow .18s;
+}
+input:focus,select:focus { border-color:var(--cyan);background:#fff;box-shadow:0 0 0 3px rgba(0,180,216,.11); }
+input.err { border-color:var(--red); }
+.hint { font-size:11px;color:var(--gray4);margin-top:2px; }
+
+.sec { font-size:11px;font-weight:800;color:var(--navy);letter-spacing:1px;text-transform:uppercase;padding:20px 0 10px;border-bottom:2px solid var(--cyan);margin-bottom:16px;display:flex;align-items:center;gap:8px; }
+.sec-badge { background:var(--cyan);color:var(--navy);font-size:10px;padding:2px 8px;border-radius:20px;font-weight:800; }
+
+.meter-table { width:100%;border-collapse:collapse;font-size:13px; }
+.meter-table th { background:var(--navy);color:#fff;padding:9px 12px;text-align:left;font-weight:700;font-size:12px; }
+.meter-table td { padding:7px 10px;border-bottom:1px solid var(--gray1);vertical-align:middle; }
+.meter-table tr:hover td { background:var(--gray0); }
+.meter-table input { background:#fff;padding:7px 10px; }
+.meter-table .calc-field { background:var(--gray1);color:var(--navy);font-weight:700;border-color:var(--gray2); }
+.usage-badge { display:inline-block;background:var(--cyan);color:var(--navy);border-radius:6px;padding:2px 10px;font-weight:800;font-size:13px;min-width:60px;text-align:center; }
+.total-row td { background:var(--navy);color:#fff;font-weight:700;padding:10px 12px; }
+.total-amount { color:var(--cyan);font-size:16px; }
+
+.uploads { display:grid;grid-template-columns:1fr 1fr;gap:14px; }
+.upload-box { border:2px dashed var(--gray3);border-radius:var(--r);padding:20px 14px;text-align:center;cursor:pointer;transition:all .18s;background:var(--gray0);position:relative;min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px; }
+.upload-box:hover,.upload-box.drag { border-color:var(--cyan);background:#e8f9fd; }
+.upload-box.ok { border-color:var(--green);background:#f0fdf4;border-style:solid; }
+.upload-box input { position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%; }
+.upload-ico { font-size:26px; }
+.upload-box h4 { font-size:13px;color:var(--navy);font-weight:700; }
+.upload-box p { font-size:11px;color:var(--gray4); }
+.file-name { font-size:11px;color:var(--green);font-weight:600;margin-top:2px; }
+.upload-full { grid-column:1/-1; }
+
+.btn { display:inline-flex;align-items:center;gap:7px;padding:11px 24px;border-radius:8px;font-size:14px;font-weight:700;border:none;cursor:pointer;transition:all .18s; }
+.btn-primary { background:var(--navy);color:#fff; }
+.btn-primary:hover:not(:disabled) { background:var(--navy2);transform:translateY(-1px);box-shadow:0 4px 14px rgba(10,34,64,.22); }
+.btn-outline { background:#fff;color:var(--navy);border:1.5px solid var(--gray2); }
+.btn-outline:hover { border-color:var(--navy);background:var(--gray0); }
+.btn:disabled { opacity:.45;cursor:not-allowed; }
+.btn-row { display:flex;gap:10px;justify-content:flex-end;margin-top:24px;flex-wrap:wrap; }
+
+.overlay { position:fixed;inset:0;background:rgba(10,34,64,.78);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:999; }
+.overlay.on { display:flex; }
+.spin { width:48px;height:48px;border:4px solid rgba(255,255,255,.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .75s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+.ov-text { color:#fff;font-size:16px;font-weight:700; }
+.ov-sub { color:var(--cyan2);font-size:13px; }
+
+.toast { position:fixed;bottom:22px;right:22px;background:var(--navy);color:#fff;padding:13px 18px;border-radius:10px;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.22);z-index:1000;display:none;border-left:4px solid var(--cyan);max-width:300px; }
+.toast.show { display:block;animation:toastIn .25s ease; }
+.toast.err { border-left-color:var(--red); }
+@keyframes toastIn { from{opacity:0;transform:translateX(60px)} to{opacity:1;transform:none} }
+
+.result-wrap { display:none; }
+.result-hd { background:var(--navy);padding:30px 24px;text-align:center;color:#fff; }
+.result-hd .big-icon { font-size:44px;margin-bottom:10px; }
+.result-hd h2 { font-size:20px;margin-bottom:4px; }
+.result-hd p { color:var(--cyan2);font-size:13px; }
+.result-bd { padding:24px; }
+.monday-ok { background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:13px 16px;display:flex;align-items:center;gap:12px;margin-bottom:18px; }
+.monday-ok .ico { font-size:22px; }
+.monday-ok h4 { font-size:14px;font-weight:700;color:#166534; }
+.monday-ok p { font-size:11px;color:#16a34a; }
+.result-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px; }
+.ri { background:var(--gray0);border-radius:8px;padding:12px 16px;border-left:3px solid var(--cyan); }
+.ri .rl { font-size:10px;color:var(--gray4);text-transform:uppercase;letter-spacing:.4px; }
+.ri .rv { font-size:14px;font-weight:700;color:var(--navy);margin-top:2px; }
+.dl-btn { display:flex;align-items:center;gap:9px;background:var(--cyan);color:var(--navy);padding:13px 22px;border-radius:8px;font-size:14px;font-weight:800;width:100%;justify-content:center;border:none;cursor:pointer;transition:all .18s; }
+.dl-btn:hover { background:#00ccf5;transform:translateY(-1px); }
+
+@media(max-width:600px){
+  .grid2,.uploads,.result-grid { grid-template-columns:1fr; }
+  .wrap { padding:0 8px; }
+  .card-bd { padding:16px; }
+  .hdr { padding:0 14px; }
+}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-logo">GL</div>
+  <span class="hdr-title">Water Billing System</span>
+  <span class="hdr-sub">Harcourts Golden Links · Property Management</span>
+</div>
+
+<div class="steps-bar">
+  <div class="steps">
+    <div class="step active" id="s1"><div class="step-dot">1</div><div class="step-lbl">Property Info</div></div>
+    <div class="step" id="s2"><div class="step-dot">2</div><div class="step-lbl">Meter Readings</div></div>
+    <div class="step" id="s3"><div class="step-dot">3</div><div class="step-lbl">Upload Files</div></div>
+    <div class="step" id="s4"><div class="step-dot">✓</div><div class="step-lbl">Done</div></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="card" id="main-card">
+    <div class="card-hd">
+      <h2>📋 Water Bill – Tenant Charge Sheet</h2>
+      <p>Complete all fields, upload meter photos and utility bills, then generate the merged PDF.</p>
+    </div>
+    <div class="card-bd">
+
+      <!-- SECTION 1 -->
+      <div class="sec">Property Info <span class="sec-badge">STEP 1</span></div>
+      <div class="grid2">
+        <div class="fg full">
+          <label>Property Address <span class="req">*</span></label>
+          <input id="f-address" type="text" placeholder="e.g. 981 Dominion Road, Mt Roskill" />
+        </div>
+
+      </div>
+
+      <!-- SECTION 2 -->
+      <div class="sec" style="margin-top:24px;">Meter Readings <span class="sec-badge">STEP 2</span></div>
+      <table class="meter-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Last Reading Date</th>
+            <th>Last Reading (KL)</th>
+            <th>This Reading Date</th>
+            <th>This Reading (KL)</th>
+            <th>Usage (KL)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>Water Meter</b></td>
+            <td><input id="r-last-date" type="text" placeholder="DD/MM/YYYY" maxlength="10" oninput="fmtDate(this);calc()" /></td>
+            <td><input id="r-last-kl" type="number" step="0.001" placeholder="356" oninput="calc()" /></td>
+            <td><input id="r-this-date" type="text" placeholder="DD/MM/YYYY" maxlength="10" oninput="fmtDate(this);calc()" /></td>
+            <td><input id="r-this-kl" type="number" step="0.001" placeholder="365" oninput="calc()" /></td>
+            <td><div class="usage-badge" id="r-usage">–</div></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top:18px;">
+        <div class="sec" style="margin-top:0;padding-top:0;">Charge Calculation</div>
+        <table class="meter-table">
+          <thead>
+            <tr>
+              <th>Item</th><th>Usage (KL)</th><th>Unit Rate ($/KL)</th><th>Amount (NZD)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Water</td>
+              <td><input id="c-water-kl" type="number" step="0.001" placeholder="9" oninput="calcCharges()" /></td>
+              <td><input id="c-water-rate" type="number" step="0.001" oninput="calcCharges()" /></td>
+              <td><input id="c-water-amt" class="calc-field" readonly placeholder="0.00" /></td>
+            </tr>
+            <tr>
+              <td>Wastewater</td>
+              <td><input id="c-waste-kl" type="number" step="0.001" placeholder="7.065" oninput="calcCharges()" /></td>
+              <td><input id="c-waste-rate" type="number" step="0.001" oninput="calcCharges()" /></td>
+              <td><input id="c-waste-amt" class="calc-field" readonly placeholder="0.00" /></td>
+            </tr>
+            <tr>
+              <td>Admin / Service Fee (optional)</td>
+              <td colspan="2"><input id="c-admin" type="number" step="0.01" placeholder="0.00" oninput="calcCharges()" style="max-width:200px;" /></td>
+              <td><input id="c-admin-show" class="calc-field" readonly placeholder="0.00" /></td>
+            </tr>
+            <tr class="total-row">
+              <td colspan="3" style="text-align:right;padding-right:16px;">TOTAL AMOUNT DUE</td>
+              <td class="total-amount" id="c-total">$0.00</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- SECTION 3 -->
+      <div class="sec" style="margin-top:24px;">Upload Files <span class="sec-badge">STEP 3</span></div>
+      <div class="uploads">
+        <div class="fg upload-full">
+          <label>Meter Photo(s) <span class="req">*</span> <span style="font-weight:400;color:var(--gray4);">– appears on Page 2</span></label>
+          <div class="upload-box" id="z-photo"
+               ondragover="dov(event,'z-photo')" ondragleave="dlv('z-photo')" ondrop="ddrop(event,'photo-inp')">
+            <input type="file" id="photo-inp" accept="image/*" multiple onchange="handlePhoto(this)" />
+            <div class="upload-ico">📷</div>
+            <h4>Click or drag meter photos</h4>
+            <p>JPG / PNG – multiple images supported</p>
+            <div class="file-name" id="photo-names"></div>
+          </div>
+          <div id="photo-thumbs" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"></div>
+        </div>
+        <div class="fg">
+          <label>WaterCare Bill PDF <span class="req">*</span></label>
+          <div class="upload-box" id="z-util"
+               ondragover="dov(event,'z-util')" ondragleave="dlv('z-util')" ondrop="ddrop(event,'util-inp')">
+            <input type="file" id="util-inp" accept=".pdf" onchange="hf(this,'z-util','util-name','pdfUtil')" />
+            <div class="upload-ico">💧</div>
+            <h4>WaterCare Bill PDF</h4>
+            <p>Pages 3–4 of merged PDF</p>
+            <div class="file-name" id="util-name"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="clearAll()">🗑 Clear All</button>
+        <button class="btn btn-primary" id="sub-btn" onclick="doSubmit()">
+          ⚡ Generate PDF &amp; Sync to Monday
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div class="result-wrap card" id="result-card">
+    <div class="result-hd">
+      <div class="big-icon">✅</div>
+      <h2>Successfully Submitted!</h2>
+      <p>Merged PDF generated and synced to Monday.com</p>
+    </div>
+    <div class="result-bd">
+      <div class="monday-ok">
+        <div class="ico">📊</div>
+        <div>
+          <h4>Monday.com Record Created</h4>
+          <p id="m-item-info">–</p>
+        </div>
+      </div>
+      <div class="result-grid" id="result-details"></div>
+      <button class="dl-btn" onclick="dlPdf()">⬇ Download Merged PDF</button>
+      <div style="margin-top:12px;text-align:center;">
+        <button class="btn btn-outline" onclick="resetAll()" style="font-size:13px;">+ New Submission</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ov">
+  <div class="spin"></div>
+  <div class="ov-text" id="ov-text">Processing…</div>
+  <div class="ov-sub" id="ov-sub">Please wait</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const S = { photos: [], pdfUtil: null, resultBytes: null };
+
+// ── Date helpers ──────────────────────────────────────────
+function fmtDate(el) {
+  let v = el.value.replace(/\D/g, '');
+  if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2);
+  if (v.length > 5) v = v.slice(0,5) + '/' + v.slice(5);
+  if (v.length > 10) v = v.slice(0,10);
+  el.value = v;
+}
+function dmyToIso(dmy) {
+  if (!dmy || dmy.length < 10) return '';
+  const [d, m, y] = dmy.split('/');
+  if (!d || !m || !y) return '';
+  return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+}
+
+// ── Calculations ──────────────────────────────────────────
+function calc() {
+  const last  = parseFloat(document.getElementById('r-last-kl').value) || 0;
+  const cur   = parseFloat(document.getElementById('r-this-kl').value) || 0;
+  const usage = cur > last ? (cur - last) : 0;
+  document.getElementById('r-usage').textContent = usage > 0 ? usage.toFixed(3) : '–';
+  if (usage > 0) {
+    document.getElementById('c-water-kl').value = usage.toFixed(3);
+    document.getElementById('c-waste-kl').value = (usage * 0.785).toFixed(3);
+  }
+  calcCharges();
+}
+function calcCharges() {
+  const wKL   = parseFloat(document.getElementById('c-water-kl').value)   || 0;
+  const wRate = parseFloat(document.getElementById('c-water-rate').value)  || 0;
+  const eKL   = parseFloat(document.getElementById('c-waste-kl').value)    || 0;
+  const eRate = parseFloat(document.getElementById('c-waste-rate').value)  || 0;
+  const admin = parseFloat(document.getElementById('c-admin').value)       || 0;
+  const wAmt  = wKL * wRate;
+  const eAmt  = eKL * eRate;
+  document.getElementById('c-water-amt').value   = wAmt.toFixed(2);
+  document.getElementById('c-waste-amt').value   = eAmt.toFixed(2);
+  document.getElementById('c-admin-show').value  = admin.toFixed(2);
+  document.getElementById('c-total').textContent = '$' + (wAmt + eAmt + admin).toFixed(2);
+}
+
+// ── File handling ─────────────────────────────────────────
+function hf(input, zone, nameId, stateKey) {
+  const file = input.files[0];
+  if (!file) return;
+  S[stateKey] = file;
+  document.getElementById(zone).classList.add('ok');
+  document.getElementById(nameId).textContent = '✓ ' + file.name;
+}
+function handlePhoto(input) {
+  const newFiles = Array.from(input.files);
+  if (!newFiles.length) return;
+  // Append new files instead of overwriting — dedupe by name+size
+  newFiles.forEach(nf => {
+    const dup = S.photos.some(ef => ef.name === nf.name && ef.size === nf.size);
+    if (!dup) S.photos.push(nf);
+  });
+  document.getElementById('z-photo').classList.add('ok');
+  document.getElementById('photo-names').textContent = '✓ ' + S.photos.length + ' photo(s): ' + S.photos.map(f => f.name).join(', ');
+  renderPhotoThumbs();
+  // Reset the input so the same file can be re-selected later if removed
+  input.value = '';
+}
+function renderPhotoThumbs() {
+  const thumbs = document.getElementById('photo-thumbs');
+  thumbs.innerHTML = '';
+  S.photos.forEach((f, idx) => {
+    const r = new FileReader();
+    r.onload = e => {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative;display:inline-block;';
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      img.style.cssText = 'height:70px;border-radius:6px;border:2px solid var(--cyan);object-fit:cover;display:block;';
+      const rm = document.createElement('button');
+      rm.textContent = '×';
+      rm.title = 'Remove photo';
+      rm.style.cssText = 'position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--red);color:#fff;border:none;cursor:pointer;font-size:13px;line-height:1;';
+      rm.onclick = () => removePhoto(idx);
+      wrap.appendChild(img);
+      wrap.appendChild(rm);
+      thumbs.appendChild(wrap);
+    };
+    r.readAsDataURL(f);
+  });
+}
+function removePhoto(idx) {
+  S.photos.splice(idx, 1);
+  document.getElementById('photo-names').textContent = S.photos.length
+    ? '✓ ' + S.photos.length + ' photo(s): ' + S.photos.map(f => f.name).join(', ')
+    : '';
+  if (!S.photos.length) document.getElementById('z-photo').classList.remove('ok');
+  renderPhotoThumbs();
+}
+function dov(e, z) { e.preventDefault(); document.getElementById(z).classList.add('drag'); }
+function dlv(z) { document.getElementById(z).classList.remove('drag'); }
+function ddrop(e, inp) {
+  e.preventDefault();
+  const el = document.getElementById(inp);
+  el.files = e.dataTransfer.files;
+  el.dispatchEvent(new Event('change'));
+  ['z-photo','z-inv','z-util'].forEach(z => document.getElementById(z).classList.remove('drag'));
+}
+
+// ── Validation ────────────────────────────────────────────
+function validate() {
+  const el = document.getElementById('f-address');
+  if (!el.value.trim()) { el.classList.add('err'); toast('Please enter the property address', true); return false; }
+  el.classList.remove('err');
+  if (!S.photos.length) { toast('Please upload at least one meter photo', true); return false; }
+  return true;
+}
+
+// ── PDF Generation ────────────────────────────────────────
+async function buildPDF() {
+  const { PDFDocument, rgb, StandardFonts } = PDFLib;
+  const doc   = await PDFDocument.create();
+  const fBold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const fReg  = await doc.embedFont(StandardFonts.Helvetica);
+
+  // Page 1: Photos + Charge table  (top-down cursor layout)
+  const A4W = 595, A4H = 842, PAD = 18;
+  const pg2     = doc.addPage([A4W, A4H]);
+  const navy    = rgb(10/255, 34/255, 64/255);
+  const cyan    = rgb(0, 180/255, 216/255);
+  const white   = rgb(1, 1, 1);
+  const gray0   = rgb(.97, .98, 1);
+  const gray1   = rgb(.82, .86, .91);
+  const dark    = rgb(.22, .28, .36);
+
+  let Y = A4H;
+
+  // Header bar
+  pg2.drawRectangle({ x:0, y:Y-52, width:A4W, height:52, color:navy });
+  pg2.drawText('Water Billing – Meter Reading & Charge Summary', { x:PAD, y:Y-28, size:13, font:fBold, color:white });
+  pg2.drawText('Harcourts Golden Links Property Management',      { x:PAD, y:Y-44, size:9,  font:fReg,  color:cyan  });
+  pg2.drawText('Date: ' + new Date().toLocaleDateString('en-NZ'), { x:410, y:Y-28, size:9,  font:fReg,  color:cyan  });
+  pg2.drawText('Ref: WB-' + Date.now().toString().slice(-6),      { x:410, y:Y-42, size:9,  font:fReg,  color:white });
+  Y -= 60;
+
+  // Info row
+  const addr = (document.getElementById('f-address').value || '').slice(0, 70);
+  const pm   = '';
+  pg2.drawRectangle({ x:PAD, y:Y-32, width:A4W-PAD*2, height:32, color:gray0 });
+  pg2.drawText('Property:', { x:PAD+8, y:Y-12, size:9, font:fBold, color:navy });
+  pg2.drawText(addr,         { x:PAD+68, y:Y-12, size:9, font:fReg,  color:dark });
+  if (pm) {
+    pg2.drawText('PM:', { x:PAD+8,  y:Y-24, size:9, font:fBold, color:navy });
+    pg2.drawText(pm,    { x:PAD+32, y:Y-24, size:9, font:fReg,  color:dark });
+  }
+  Y -= 42;
+
+  // Meter readings table header
+  pg2.drawRectangle({ x:PAD, y:Y-18, width:A4W-PAD*2, height:18, color:navy });
+  pg2.drawText('METER READINGS', { x:PAD+8, y:Y-13, size:9, font:fBold, color:white });
+  Y -= 18;
+
+  const mCols = ['Last Reading Date','Last (KL)','This Reading Date','This (KL)','Usage (KL)'];
+  const mVals = [
+    document.getElementById('r-last-date').value || '–',
+    document.getElementById('r-last-kl').value   || '–',
+    document.getElementById('r-this-date').value || '–',
+    document.getElementById('r-this-kl').value   || '–',
+    (document.getElementById('r-usage').textContent || '–').replace('–','0 KL'),
+  ];
+  const mW = (A4W - PAD*2) / mCols.length;
+  pg2.drawRectangle({ x:PAD, y:Y-18, width:A4W-PAD*2, height:18, color:gray0 });
+  mCols.forEach((h, i) => pg2.drawText(h, { x:PAD+8+i*mW, y:Y-13, size:7.5, font:fBold, color:navy }));
+  Y -= 18;
+  pg2.drawRectangle({ x:PAD, y:Y-22, width:A4W-PAD*2, height:22, color:white });
+  mVals.forEach((v, i) => pg2.drawText(v, { x:PAD+8+i*mW, y:Y-15, size:10, font:fBold, color: i===4 ? cyan : dark }));
+  Y -= 22;
+  pg2.drawLine({ start:{x:PAD,y:Y}, end:{x:A4W-PAD,y:Y}, thickness:0.5, color:gray1 });
+  Y -= 10;
+
+  // Photos
+  pg2.drawText('Meter Photo(s)', { x:PAD, y:Y-2, size:9, font:fBold, color:navy });
+  Y -= 14;
+  const photos = S.photos.slice(0, 4);
+  const maxPhW = photos.length >= 2 ? (A4W - PAD*2 - 10) / 2 : A4W - PAD*2;
+  const maxPhH = 185;
+  let maxRowH  = 0;
+  for (let i = 0; i < photos.length; i++) {
+    const bytes = await photos[i].arrayBuffer();
+    let img = photos[i].type === 'image/png'
+      ? await doc.embedPng(bytes)
+      : await doc.embedJpg(bytes);
+    const dim = img.scale(1);
+    let w = dim.width, h = dim.height;
+    if (w > maxPhW) { h = h * maxPhW / w; w = maxPhW; }
+    if (h > maxPhH) { w = w * maxPhH / h; h = maxPhH; }
+    const col = i % 2, row = Math.floor(i / 2);
+    if (col === 0 && row > 0) { Y -= maxRowH + 8; maxRowH = 0; }
+    pg2.drawImage(img, { x: PAD + col * (maxPhW + 10), y: Y - h, width: w, height: h });
+    if (h > maxRowH) maxRowH = h;
+  }
+  Y -= maxRowH + 14;
+
+  pg2.drawLine({ start:{x:PAD,y:Y}, end:{x:A4W-PAD,y:Y}, thickness:0.5, color:gray1 });
+  Y -= 10;
+
+  // Charge table
+  pg2.drawRectangle({ x:PAD, y:Y-18, width:A4W-PAD*2, height:18, color:navy });
+  pg2.drawText('CHARGE CALCULATION', { x:PAD+8, y:Y-13, size:9, font:fBold, color:white  });
+  pg2.drawText('Usage',              { x:200,   y:Y-13, size:8, font:fBold, color:gray1 });
+  pg2.drawText('Rate',               { x:320,   y:Y-13, size:8, font:fBold, color:gray1 });
+  pg2.drawText('Amount (NZD)',       { x:455,   y:Y-13, size:8, font:fBold, color:cyan  });
+  Y -= 18;
+
+  // Safe value getters — never produce empty string for drawText
+  const wkl  = document.getElementById('c-water-kl').value  || '0';
+  const wrate = document.getElementById('c-water-rate').value || '0';
+  const wamt  = document.getElementById('c-water-amt').value  || '0.00';
+  const ekl   = document.getElementById('c-waste-kl').value  || '0';
+  const erate = document.getElementById('c-waste-rate').value || '0';
+  const eamt  = document.getElementById('c-waste-amt').value  || '0.00';
+  const admin = parseFloat(document.getElementById('c-admin').value) || 0;
+  const total = document.getElementById('c-total').textContent || '$0.00';
+
+  const rows = [
+    ['Water',      wkl + ' KL',  '$' + wrate + '/KL', '$' + wamt],
+    ['Wastewater', ekl + ' KL',  '$' + erate + '/KL', '$' + eamt],
+  ];
+  if (admin > 0) rows.push(['Admin / Service Fee', '', '', '$' + admin.toFixed(2)]);
+
+  rows.forEach((r, i) => {
+    pg2.drawRectangle({ x:PAD, y:Y-22, width:A4W-PAD*2, height:22, color: i%2===0 ? gray0 : white });
+    pg2.drawText(r[0], { x:PAD+8, y:Y-15, size:10, font:fReg,  color:dark });
+    if (r[1]) pg2.drawText(r[1], { x:200, y:Y-15, size:10, font:fReg,  color:dark });
+    if (r[2]) pg2.drawText(r[2], { x:320, y:Y-15, size:10, font:fReg,  color:dark });
+    pg2.drawText(r[3], { x:455, y:Y-15, size:10, font:fBold, color:navy });
+    Y -= 22;
+  });
+
+  pg2.drawRectangle({ x:PAD, y:Y-28, width:A4W-PAD*2, height:28, color:navy });
+  pg2.drawText('TOTAL AMOUNT DUE', { x:PAD+8, y:Y-19, size:11, font:fBold, color:white });
+  pg2.drawText(total,               { x:430,   y:Y-19, size:14, font:fBold, color:cyan  });
+
+  pg2.drawText('Harcourts Golden Links · Property Management', { x:PAD, y:16, size:8, font:fReg, color:gray1 });
+
+  // Pages 3-4: WaterCare bill (optional)
+  if (S.pdfUtil) {
+    const utilBytes = await S.pdfUtil.arrayBuffer();
+    const utilDoc   = await PDFDocument.load(utilBytes);
+    const utilIndices = utilDoc.getPageIndices().slice(0, 2);
+    const utilPages   = await doc.copyPages(utilDoc, utilIndices);
+    utilPages.forEach(p => doc.addPage(p));
+  }
+
+  // Page numbers
+  const allPgs = doc.getPages();
+  allPgs.forEach((p, i) => {
+    p.drawText((i+1) + '/' + allPgs.length, { x:p.getWidth()-45, y:14, size:8, font:fReg, color:rgb(.6,.6,.6) });
+  });
+
+  return await doc.save();
+}
+
+// ── Monday sync ───────────────────────────────────────────
+async function syncMonday(pdfBytes) {
+  const g    = id => document.getElementById(id);
+  const slug = s  => (s||'').replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,30);
+
+  const payload = {
+    tenantName:        g('f-address').value.split(',')[0] || 'Property',
+    address:           g('f-address').value,
+    lastDate:          dmyToIso(g('r-last-date').value),
+    lastKL:            g('r-last-kl').value,
+    thisDate:          dmyToIso(g('r-this-date').value) || new Date().toISOString().slice(0,10),
+    thisKL:            g('r-this-kl').value,
+    usageKL:           (g('r-usage').textContent || '0').replace('–','0'),
+    waterRate:         g('c-water-rate').value,
+    wastewaterRate:    g('c-waste-rate').value,
+    wastewaterUsageKL: g('c-waste-kl').value,
+    waterAmount:       g('c-water-amt').value,
+    wastewaterAmount:  g('c-waste-amt').value,
+    totalAmount:       g('c-total').textContent.replace('$',''),
+  };
+
+  let itemId;
+  try {
+    setOv('Creating Monday record…', 'Uploading data');
+    const r1 = await fetch('/api/monday', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Action': 'create_item' },
+      body: JSON.stringify(payload)
+    });
+    const d1 = await r1.json();
+    if (d1.error) throw new Error(d1.error);
+    itemId = d1.itemId;
+  } catch(e) {
+    return { ok: false, msg: 'Create item failed: ' + e.message };
+  }
+
+  const tenant = slug(g('f-address').value.split(',')[0] || 'property');
+  const date   = g('r-this-date').value.replace(/\//g,'-') || new Date().toISOString().slice(0,10);
+
+  const uploads = [
+    { file: null,         colId: 'file_mm3qxqbg', name: '',                                  label: 'Meter photos…',  isPhotos: true },
+    { file: S.pdfUtil,    colId: 'file_mm3qd3yr', name: `WaterBill_${tenant}_${date}.pdf`,   label: 'Water bill PDF…'    },
+    { file: new Blob([pdfBytes],{type:'application/pdf'}), colId: 'file_mm3qpg31', name: `MERGED_${tenant}_${date}.pdf`, label: 'Final PDF…' },
+  ];
+
+  for (const u of uploads) {
+    if (!u.file && !u.isPhotos) continue;
+    setOv('Uploading ' + u.label, `Item ${itemId}`);
+    try {
+      if (u.isPhotos) {
+        for (let i = 0; i < S.photos.length; i++) {
+          const fd = new FormData();
+          fd.append('query', `mutation ($f: File!) { add_file_to_column(item_id: ${itemId}, column_id: "${u.colId}", file: $f) { id } }`);
+          fd.append('variables[f]', S.photos[i], `Photo${i+1}_${tenant}_${date}.jpg`);
+          await fetch('/api/monday', { method: 'POST', body: fd });
+        }
+        continue;
+      }
+      const fd = new FormData();
+      fd.append('query', `mutation ($f: File!) { add_file_to_column(item_id: ${itemId}, column_id: "${u.colId}", file: $f) { id } }`);
+      fd.append('variables[f]', u.file, u.name);
+      await fetch('/api/monday', { method: 'POST', body: fd });
+    } catch(e) { console.warn('Upload non-fatal:', u.label, e.message); }
+  }
+
+  await fetch('/api/monday', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Action': 'update_status' },
+    body: JSON.stringify({ itemId, status: 'Completed' })
+  }).catch(()=>{});
+
+  return { ok: true, msg: `Monday record created — Item ID: ${itemId}` };
+}
+
+// ── Submit ────────────────────────────────────────────────
+async function doSubmit() {
+  if (!validate()) return;
+  setStep(3);
+  showOv();
+  setOv('Building PDF…', 'Merging invoice, photos and utility bill');
+  try {
+    const bytes = await buildPDF();
+    S.resultBytes = bytes;
+    const mondayRes = await syncMonday(bytes);
+    hideOv();
+    setStep(4);
+    showResult(mondayRes);
+    toast('🎉 Done!');
+  } catch(e) {
+    hideOv();
+    toast('Error: ' + e.message, true);
+    console.error(e);
+  }
+}
+
+function showResult(mr) {
+  document.getElementById('main-card').style.display = 'none';
+  const rc = document.getElementById('result-card');
+  rc.style.display = 'block';
+  rc.scrollIntoView({ behavior:'smooth' });
+  document.getElementById('m-item-info').textContent = mr.msg;
+  document.getElementById('m-item-info').style.color = mr.ok ? 'var(--green)' : 'var(--red)';
+  const total = document.getElementById('c-total').textContent;
+  document.getElementById('result-details').innerHTML = [
+    ['Property', document.getElementById('f-address').value],
+    ['Usage',    document.getElementById('r-usage').textContent + ' KL'],
+    ['Total Due', total],
+    ['PDF Pages', '3–4'],
+  ].map(([l,v]) => `<div class="ri"><div class="rl">${l}</div><div class="rv">${v}</div></div>`).join('');
+}
+
+function dlPdf() {
+  if (!S.resultBytes) return;
+  const addr = (document.getElementById('f-address').value||'property').replace(/[^a-zA-Z0-9]/g,'_').slice(0,30);
+  const url  = URL.createObjectURL(new Blob([S.resultBytes],{type:'application/pdf'}));
+  const a = document.createElement('a');
+  a.href = url; a.download = `WaterBill_${addr}_${new Date().toISOString().slice(0,10)}.pdf`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Helpers ───────────────────────────────────────────────
+function setStep(n) {
+  [1,2,3,4].forEach(i => {
+    const s = document.getElementById('s'+i);
+    s.classList.remove('active','done');
+    if (i < n) s.classList.add('done');
+    if (i === n) s.classList.add('active');
+  });
+}
+function showOv() { document.getElementById('ov').classList.add('on'); }
+function hideOv() { document.getElementById('ov').classList.remove('on'); }
+function setOv(t,s) { document.getElementById('ov-text').textContent=t; document.getElementById('ov-sub').textContent=s; }
+function toast(msg, err=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (err ? ' err' : '');
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+function clearAll() {
+  if (!confirm('Clear all data?')) return;
+  ['f-address','r-last-date','r-this-date','r-last-kl','r-this-kl',
+   'c-water-kl','c-waste-kl','c-admin','c-water-amt','c-waste-amt','c-admin-show']
+    .forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('c-total').textContent = '$0.00';
+  document.getElementById('r-usage').textContent = '–';
+  S.photos=[]; S.pdfUtil=null; S.resultBytes=null;
+  ['z-photo','z-util'].forEach(z => document.getElementById(z).classList.remove('ok'));
+  ['photo-names','util-name'].forEach(n => document.getElementById(n).textContent='');
+  document.getElementById('photo-thumbs').innerHTML = '';
+  // Reset file inputs so onchange fires even if same file is selected again
+  ['photo-inp','util-inp'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  setStep(1);
+}
+function resetAll() {
+  document.getElementById('result-card').style.display = 'none';
+  document.getElementById('main-card').style.display   = 'block';
+  clearAll();
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('c-water-rate').value = '2.296';
+  document.getElementById('c-waste-rate').value = '3.994';
+  calcCharges();
+});
+</script>
+</body>
+</html>
